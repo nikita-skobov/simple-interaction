@@ -3,8 +3,8 @@ use std::io;
 
 pub enum InteractConfirm {
     YesNo,
-    Number(u32),
-    Word(String),
+    Number,
+    Word,
 }
 
 /// this is the inverse of InteractConfirm. InteractConfirm is used
@@ -14,18 +14,28 @@ pub enum InteractConfirm {
 #[derive(Debug, PartialOrd, PartialEq)]
 pub enum InteractResult {
     YesNo(bool),
-    Number(u32),
+    Number(usize),
     Word(String),
+}
+
+pub struct InteractChoice {
+    pub message: String,
 }
 
 pub struct InteractChoices {
     pub confirmation: InteractConfirm,
+    /// only use this for yes/no, otherwise use description for longer
+    /// interactions, and then the actual choices have their own messages
     pub message: String,
+    /// this will be displayed to the user once per interaction loop. it is meant
+    /// to serve as a long text field explaining the interaction
     pub description: Option<String>,
     /// specify the maximum number of times to repeat
     /// the question if the user entered an invalid selection.
     /// if None, then loop forever.
     pub max_loop: Option<usize>,
+    /// if confirmation type is yes/no, then this vec can/should be empty
+    pub choices: Vec<InteractChoice>,
 }
 
 impl InteractChoices {
@@ -35,10 +45,15 @@ impl InteractChoices {
             InteractConfirm::YesNo => {
                 format!("{} [y/n]:", out_str)
             }
-            InteractConfirm::Number(_) => {
-                todo!()
+            InteractConfirm::Number => {
+                // if this vec is empty, what do?
+                let mut s = String::from("");
+                for (i, msg) in self.choices.iter().enumerate() {
+                    s = format!("{}. {}\n", i, msg.message);
+                }
+                format!("{}\n{}", out_str, s)
             }
-            InteractConfirm::Word(_) => {
+            InteractConfirm::Word => {
                 todo!()
             }
         }
@@ -58,10 +73,14 @@ impl InteractChoices {
                 };
                 InteractResult::YesNo(answer)
             },
-            InteractConfirm::Number(_) => {
-                todo!()
+            InteractConfirm::Number => {
+                let num = input.parse::<usize>().map_or(None, |n| Some(n))?;
+                if num > self.choices.len() {
+                    return None;
+                }
+                InteractResult::Number(num)
             }
-            InteractConfirm::Word(_) => {
+            InteractConfirm::Word => {
                 todo!()
             }
         };
@@ -73,16 +92,41 @@ impl InteractChoices {
 
 /// if doing "do you want XYZ?".into()
 /// then that should be interpreted as a simple yes/no interact choice
-impl<S: AsRef<str>> From<S> for InteractChoices {
-    fn from(orig: S) -> Self {
+impl From<&str> for InteractChoices {
+    fn from(orig: &str) -> Self {
         InteractChoices {
             confirmation: InteractConfirm::YesNo,
-            message: orig.as_ref().to_string(),
+            message: orig.to_string(),
             description: None,
             max_loop: None,
+            choices: vec![],
         }
     }
 }
+
+impl From<String> for InteractChoices {
+    fn from(s: String) -> Self { InteractChoices::from(&s[..]) }
+}
+
+impl<S: AsRef<str>> From<&[S]> for InteractChoices {
+    fn from(orig: &[S]) -> Self {
+        let mut out_vec = vec![];
+        for entry in orig {
+            out_vec.push(InteractChoice {
+                message: entry.as_ref().to_string(),
+            });
+        }
+        InteractChoices {
+            confirmation: InteractConfirm::Number,
+            message: "".into(),
+            description: None,
+            max_loop: None,
+            choices: out_vec,
+        }
+    }
+}
+
+
 
 /// like the interact() fn, but this
 /// takes an abstract readable interface instead of
@@ -139,12 +183,24 @@ mod tests {
     use io::Cursor;
 
     #[test]
-    fn choices_into_works() {
+    fn yesno_choices_into_works() {
         let mut choice1: InteractChoices = "do you want XYZ?".into();
         choice1.max_loop = Some(1);
         let answer = "y\n";
         let buff = Cursor::new(answer.as_bytes());
         let result = interact_ex(choice1, buff).unwrap();
         assert_eq!(result, InteractResult::YesNo(true));
+    }
+
+    #[test]
+    fn list_choices_into_works() {
+        let mut choice1 = InteractChoices::from(
+            &["apples", "oranges", "babnannamas"][..]
+        );
+        choice1.max_loop = Some(1);
+        let answer = "2\n";
+        let buff = Cursor::new(answer.as_bytes());
+        let result = interact_ex(choice1, buff).unwrap();
+        assert_eq!(result, InteractResult::Number(2));
     }
 }
