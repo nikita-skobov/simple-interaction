@@ -43,6 +43,16 @@ pub struct InteractChoices {
 }
 
 impl InteractChoices {
+    pub fn choose_word(message: &str) -> InteractChoices {
+        InteractChoices {
+            confirmation: InteractConfirm::Word,
+            message: message.to_string(),
+            description: None,
+            max_loop: None,
+            choices: vec![],
+        }
+    }
+
     pub fn print(&self) -> String {
         let out_str = &self.message;
         match self.confirmation {
@@ -58,7 +68,7 @@ impl InteractChoices {
                 format!("{}\n{}", out_str, s)
             }
             InteractConfirm::Word => {
-                todo!()
+                format!("{}:", out_str)
             }
         }
     }
@@ -85,7 +95,7 @@ impl InteractChoices {
                 InteractResult::Number(num)
             }
             InteractConfirm::Word => {
-                todo!()
+                InteractResult::Word(input.to_string())
             }
         };
 
@@ -157,6 +167,15 @@ pub fn interact_number(interact_choices: InteractChoices) -> io::Result<usize> {
         InteractResult::YesNo(_) => Err(new_err("Invalid selection type")),
         InteractResult::Number(n) => Ok(n),
         InteractResult::Word(_) => Err(new_err("Invalid selection type")),
+    }
+}
+
+pub fn interact_word(interact_choices: InteractChoices) -> io::Result<String> {
+    let res = interact(interact_choices)?;
+    match res {
+        InteractResult::YesNo(_) => Err(new_err("Invalid selection type")),
+        InteractResult::Number(_) => Err(new_err("Invalid selection type")),
+        InteractResult::Word(w) => Ok(w),
     }
 }
 
