@@ -1,6 +1,10 @@
 use std::io::prelude::*;
 use std::io;
 
+pub fn new_err(msg: &str) -> io::Error {
+    io::Error::new(io::ErrorKind::Other, msg)
+}
+
 pub enum InteractConfirm {
     YesNo,
     Number,
@@ -126,7 +130,35 @@ impl<S: AsRef<str>> From<&[S]> for InteractChoices {
     }
 }
 
+/// convenience function to parse the interact result on users behalf
+/// instead of user having to manually match against the result even though
+/// they are only looking for a true/false.
+/// as such, it is the user's responsibility to ensure that
+/// their interact choices object DOES IN FACT have a yes/no confirmation
+/// otherwise this will return an error result
+pub fn interact_yesno(interact_choices: InteractChoices) -> io::Result<bool> {
+    let res = interact(interact_choices)?;
+    match res {
+        InteractResult::YesNo(b) => Ok(b),
+        InteractResult::Number(_) => Err(new_err("Invalid selection type")),
+        InteractResult::Word(_) => Err(new_err("Invalid selection type")),
+    }
+}
 
+/// convenience function to parse the interact result on users behalf
+/// instead of user having to manually match against the result even though
+/// they are only looking for a number.
+/// as such, it is the user's responsibility to ensure that
+/// their interact choices object DOES IN FACT have a numbers confirmation
+/// otherwise this will return an error result
+pub fn interact_number(interact_choices: InteractChoices) -> io::Result<usize> {
+    let res = interact(interact_choices)?;
+    match res {
+        InteractResult::YesNo(_) => Err(new_err("Invalid selection type")),
+        InteractResult::Number(n) => Ok(n),
+        InteractResult::Word(_) => Err(new_err("Invalid selection type")),
+    }
+}
 
 /// like the interact() fn, but this
 /// takes an abstract readable interface instead of
