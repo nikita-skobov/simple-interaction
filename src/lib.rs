@@ -5,6 +5,7 @@ pub fn new_err(msg: &str) -> io::Error {
     io::Error::new(io::ErrorKind::Other, msg)
 }
 
+#[derive(Debug)]
 pub enum InteractConfirm {
     YesNo,
     Number,
@@ -22,10 +23,12 @@ pub enum InteractResult {
     Word(String),
 }
 
+#[derive(Debug)]
 pub struct InteractChoice {
     pub message: String,
 }
 
+#[derive(Debug)]
 pub struct InteractChoices {
     pub confirmation: InteractConfirm,
     /// only use this for yes/no, otherwise use description for longer
@@ -63,9 +66,9 @@ impl InteractChoices {
                 // if this vec is empty, what do?
                 let mut s = String::from("");
                 for (i, msg) in self.choices.iter().enumerate() {
-                    s = format!("{}. {}\n", i, msg.message);
+                    s = format!("{}{}. {}\n", s, i + 1, msg.message);
                 }
-                format!("{}\n{}", out_str, s)
+                format!("{}{}", out_str, s)
             }
             InteractConfirm::Word => {
                 format!("{}:", out_str)
