@@ -43,6 +43,10 @@ pub struct InteractChoices {
     pub max_loop: Option<usize>,
     /// if confirmation type is yes/no, then this vec can/should be empty
     pub choices: Vec<InteractChoice>,
+
+    /// the string that gets output on the same line as the users input.
+    /// if None, then the message will be used as the prompt string
+    pub prompt_string: Option<String>,
 }
 
 impl InteractChoices {
@@ -53,6 +57,7 @@ impl InteractChoices {
             description: None,
             max_loop: None,
             choices: vec![],
+            prompt_string: Some("> ".into()),
         }
     }
 
@@ -60,7 +65,7 @@ impl InteractChoices {
         let out_str = &self.message;
         match self.confirmation {
             InteractConfirm::YesNo => {
-                format!("{} [y/n]:", out_str)
+                format!("{} [y/n]: ", out_str)
             }
             InteractConfirm::Number => {
                 // if this vec is empty, what do?
@@ -68,6 +73,8 @@ impl InteractChoices {
                 for (i, msg) in self.choices.iter().enumerate() {
                     s = format!("{}{}. {}\n", s, i + 1, msg.message);
                 }
+                // remove trailing newline
+                s.pop();
                 format!("{}{}", out_str, s)
             }
             InteractConfirm::Word => {
@@ -117,6 +124,7 @@ impl From<&str> for InteractChoices {
             description: None,
             max_loop: None,
             choices: vec![],
+            prompt_string: None,
         }
     }
 }
@@ -139,6 +147,7 @@ impl<S: AsRef<str>> From<&[S]> for InteractChoices {
             description: None,
             max_loop: None,
             choices: out_vec,
+            prompt_string: Some("> ".into()),
         }
     }
 }
@@ -198,7 +207,11 @@ pub fn interact_ex<R: BufRead>(
     let mut result = None;
     let mut attempts = 0;
     while result.is_none() {
-        println!("{}", interact_choices.print());
+        print!("{}", interact_choices.print());
+        if let Some(ref prompt) = interact_choices.prompt_string {
+            print!("\n{}", prompt);
+        }
+        let _ = io::stdout().flush();
         let mut s = String::from("");
         input.read_line(&mut s)?;
         let s_trimmed = s.trim_end();
