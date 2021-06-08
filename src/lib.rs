@@ -99,7 +99,7 @@ impl InteractChoices {
             },
             InteractConfirm::Number => {
                 let num = input.parse::<usize>().map_or(None, |n| Some(n))?;
-                if num > self.choices.len() {
+                if num > self.choices.len() || num == 0 { // we want selection index to start at 1
                     return None;
                 }
                 InteractResult::Number(num)
